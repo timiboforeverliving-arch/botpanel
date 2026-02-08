@@ -18,8 +18,18 @@ const CONFIG_DOC_ID = 'default_config';
 dotenv.config();
 
 // Firebase
-const serviceAccount = require('./service-account.json');
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+let serviceAccount;
+try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+    } else {
+        serviceAccount = require('./service-account.json');
+    }
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+} catch (error) {
+    console.error('Firebase Init Error:', error);
+}
+
 const db = admin.firestore();
 
 // Load Config from DB on Start
