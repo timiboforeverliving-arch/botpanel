@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Bot Oluşturucu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-50 h-screen flex flex-col">
+
+    <!-- HEADER -->
+    <header class="bg-white border-b px-6 py-4 flex justify-between items-center shadow-sm">
+        <div class="flex items-center gap-2">
+            <div class="bg-blue-600 text-white p-2 rounded-lg"><i class="fas fa-robot text-xl"></i></div>
+            <h1 class="text-xl font-bold text-gray-800">
+                <span data-i18n="header_title">Bot Builder</span> 
+                <span class="text-sm font-normal text-gray-500" data-i18n="header_subtitle">| Kendi AI Asistanını Tasarla</span>
+            </h1>
+        </div>
+        <div class="flex gap-3 items-center">
+            <!-- Language Toggle -->
+            <div class="bg-gray-100 rounded-lg p-1 flex mr-2">
+                <button onclick="setLanguage('tr')" id="btn-lang-tr" class="px-3 py-1 rounded-md text-sm font-medium transition bg-white text-blue-600 shadow-sm">TR</button>
+                <button onclick="setLanguage('en')" id="btn-lang-en" class="px-3 py-1 rounded-md text-sm font-medium transition text-gray-500 hover:text-gray-700">EN</button>
+            </div>
+
+            <button onclick="saveConfig()" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition">
+                <i class="fas fa-save mr-2"></i><span data-i18n="btn_save">Kaydet</span>
+            </button>
+            <!-- DOWNLOAD BUTTON (Deactivated) -->
+            <button onclick="downloadPackage()" class="hidden bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-bold shadow-lg transition flex items-center animate-pulse">
+                <i class="fas fa-download mr-2"></i><span data-i18n="btn_buy">Satın Al & İndir ($50)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- LEFT: CONFIGURATION -->
+        <div class="w-1/2 overflow-y-auto p-6 border-r bg-white">
+            
+            <!-- TABS -->
+            <div class="flex border-b mb-6 sticky top-0 bg-white z-10 pt-2">
+                <button onclick="switchTab('manual')" class="tab-btn active border-b-2 border-blue-600 text-blue-600 pb-2 px-4 font-medium" id="tab-manual">
+                    <i class="fas fa-edit mr-2"></i><span data-i18n="tab_manual">Bot Ayarları</span>
+                </button>
+                <button onclick="switchTab('web')" class="tab-btn border-transparent text-gray-500 pb-2 px-4 font-medium hover:text-blue-500" id="tab-web">
+                    <i class="fas fa-globe mr-2"></i><span data-i18n="tab_web">Web</span>
+                </button>
+                <button onclick="switchTab('file')" class="tab-btn border-transparent text-gray-500 pb-2 px-4 font-medium hover:text-blue-500" id="tab-file">
+                    <i class="fas fa-file-upload mr-2"></i><span data-i18n="tab_file">Doküman</span>
+                </button>
+            </div>
+
+            <!-- MANUAL CONFIG -->
+            <div id="content-manual" class="space-y-6">
+                
+                <!-- 1. Şirket ve Bot Kimliği -->
+                <div class="bg-gray-50 p-4 rounded-xl border">
+                    <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">1</span>
+                        <span data-i18n="sec1_title">Şirket & Bot Kimliği</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_company_name">Şirket İsmi</label>
+                                <input type="text" id="companyName" data-i18n-placeholder="ph_company_name" placeholder="Örn: ABC Emlak" class="w-full p-2 border rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_industry">Hizmet Alanı (Sektör)</label>
+                                <input type="text" id="companyIndustry" data-i18n-placeholder="ph_industry" placeholder="Örn: Gayrimenkul Danışmanlığı" class="w-full p-2 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_bot_name">Bot İsmi</label>
+                                <input type="text" id="personaName" data-i18n-placeholder="ph_bot_name" placeholder="Örn: Elif" class="w-full p-2 border rounded text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_role">Rolü</label>
+                                <input type="text" id="personaRole" data-i18n-placeholder="ph_role" placeholder="Örn: Satış Temsilcisi" class="w-full p-2 border rounded text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_tone">Botun Kişiliği (Tonu)</label>
+                            <input type="text" id="personaTone" data-i18n-placeholder="ph_tone" placeholder="Örn: Kurumsal, samimi, enerjik..." class="w-full p-2 border rounded text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Detaylı Şirket Tanıtımı -->
+                <div class="bg-gray-50 p-4 rounded-xl border">
+                    <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">2</span>
+                        <span data-i18n="sec2_title">Şirket Detayları</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_desc">Şirket Tarihçesi ve Tanıtımı</label>
+                            <textarea id="companyDescription" rows="3" data-i18n-placeholder="ph_desc" placeholder="Ne zaman kuruldu? Vizyonu nedir? Ne kadar süredir sektörde?" class="w-full p-2 border rounded text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_process">Hizmet Süreci Örneği</label>
+                            <textarea id="serviceProcessExample" rows="2" data-i18n-placeholder="ph_process" placeholder="Örn: Müşteri arar, randevu alırız, yer gösterimi yaparız..." class="w-full p-2 border rounded text-sm"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_services">Verilen Hizmetler</label>
+                                <textarea id="servicesOffered" rows="2" data-i18n-placeholder="ph_services" placeholder="Örn: Arsa satışı, konut kiralama..." class="w-full p-2 border rounded text-sm"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_not_services">Verilmeyen Hizmetler (Karıştırılanlar)</label>
+                                <textarea id="servicesNotOffered" rows="2" data-i18n-placeholder="ph_not_services" placeholder="Örn: Kiralık ev bakmıyoruz, sadece satılık." class="w-full p-2 border rounded text-sm"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Bilgi Bankası ve SSS -->
+                <div class="bg-gray-50 p-4 rounded-xl border">
+                    <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">3</span>
+                        <span data-i18n="sec3_title">Bilgi Bankası & SSS</span>
+                    </h3>
+                    <p class="text-xs text-gray-500 mb-2" data-i18n="sec3_desc">Müşterilerin sorabileceği 15 soru ve cevabı için "Doküman" sekmesinden dosya yükleyebilirsiniz veya buraya yazabilirsiniz.</p>
+                    <textarea id="kbGeneralInfo" rows="4" data-i18n-placeholder="ph_kb" placeholder="Ekstra bilgiler, sık sorulan sorular ve cevapları..." class="w-full p-2 border rounded text-sm"></textarea>
+                </div>
+
+                <!-- 4. Kurallar ve Sınırlar -->
+                <div class="bg-gray-50 p-4 rounded-xl border">
+                    <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">4</span>
+                        <span data-i18n="sec4_title">Kurallar ve Yasaklar</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_forbidden">Asla Konuşulmayacak Konular</label>
+                            <textarea id="forbiddenTopics" rows="2" data-i18n-placeholder="ph_forbidden" placeholder="Örn: Siyaset, din, yönetici telefonları, şirket cirosu..." class="w-full p-2 border rounded text-sm"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_refusal">Reddetme Cevabı</label>
+                            <input type="text" id="refusalResponse" data-i18n-placeholder="ph_refusal" placeholder="Örn: Bu bilgiyi paylaşamıyorum, ancak hizmetlerimizle ilgili..." class="w-full p-2 border rounded text-sm">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Randevu ve Satış -->
+                <div class="bg-gray-50 p-4 rounded-xl border">
+                    <h3 class="font-semibold text-gray-700 mb-3 flex items-center">
+                        <span class="bg-blue-100 text-blue-600 w-6 h-6 rounded-full flex items-center justify-center text-xs mr-2">5</span>
+                        <span data-i18n="sec5_title">Randevu & Satış Hedefi</span>
+                    </h3>
+                    
+                    <div class="mb-3">
+                        <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_req_info">Randevu İçin İstenen Bilgiler</label>
+                        <div class="flex flex-wrap gap-2 text-sm">
+                            <label class="flex items-center"><input type="checkbox" class="req-info mr-1" value="name" checked> <span data-i18n="chk_name">İsim</span></label>
+                            <label class="flex items-center"><input type="checkbox" class="req-info mr-1" value="phone" checked> <span data-i18n="chk_phone">Telefon</span></label>
+                            <label class="flex items-center"><input type="checkbox" class="req-info mr-1" value="address"> <span data-i18n="chk_address">Adres</span></label>
+                            <label class="flex items-center"><input type="checkbox" class="req-info mr-1" value="email"> <span data-i18n="chk_email">E-posta</span></label>
+                            <label class="flex items-center"><input type="checkbox" class="req-info mr-1" value="notes"> <span data-i18n="chk_notes">Not</span></label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1" data-i18n="lbl_closing">Görüşme Sonlandırma Mesajı</label>
+                        <textarea id="closingMessage" rows="2" data-i18n-placeholder="ph_closing" placeholder="Örn: Satış departmanımız sizi en kısa sürede arayacaktır." class="w-full p-2 border rounded text-sm"></textarea>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- WEB SCRAPER -->
+            <div id="content-web" class="hidden space-y-6">
+                <div class="bg-blue-50 p-6 rounded-xl border border-blue-100 text-center">
+                    <i class="fas fa-globe text-4xl text-blue-500 mb-3"></i>
+                    <h3 class="text-lg font-semibold text-gray-800" data-i18n="web_title">Web Sitenizden Öğrensin</h3>
+                    <p class="text-gray-600 mb-4 text-sm" data-i18n="web_desc">Botunuz web sitenizi tarayarak hizmetlerinizi ve bilgilerinizi otomatik öğrenir.</p>
+                    
+                    <div class="flex gap-2">
+                        <input type="url" id="scrapeUrl" data-i18n-placeholder="ph_url" placeholder="https://ornek-site.com" class="flex-1 p-2 border rounded">
+                        <button onclick="scrapeSite()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            <i class="fas fa-magic mr-1"></i><span data-i18n="btn_scrape">Analiz Et</span>
+                        </button>
+                    </div>
+                    <div id="scrapePreview" class="mt-4 text-left text-xs text-gray-500 bg-white p-2 rounded border hidden h-32 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <!-- FILE UPLOAD -->
+            <div id="content-file" class="hidden space-y-6">
+                <div class="bg-purple-50 p-6 rounded-xl border border-purple-100 text-center">
+                    <i class="fas fa-file-pdf text-4xl text-purple-500 mb-3"></i>
+                    <h3 class="text-lg font-semibold text-gray-800" data-i18n="file_title">Doküman Yükle</h3>
+                    <p class="text-gray-600 mb-4 text-sm" data-i18n="file_desc">PDF veya Word dosyalarınızı yükleyin, botunuz içeriği öğrensin.</p>
+                    
+                    <input type="file" id="fileInput" class="hidden" accept=".pdf,.doc,.docx,.txt" onchange="uploadFile()">
+                    <button onclick="document.getElementById('fileInput').click()" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700">
+                        <i class="fas fa-cloud-upload-alt mr-2"></i><span data-i18n="btn_file">Dosya Seç</span>
+                    </button>
+                    <div id="uploadPreview" class="mt-4 text-left text-xs text-gray-500 bg-white p-2 rounded border hidden h-32 overflow-y-auto"></div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- RIGHT: SIMULATOR -->
+        <div class="w-1/2 bg-gray-100 flex flex-col relative">
+            <!-- Simulator Header -->
+            <div class="bg-white p-3 border-b flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                    <span class="font-medium text-gray-700" data-i18n="sim_title">Canlı Önizleme</span>
+                </div>
+                <button onclick="clearChat()" class="text-xs text-gray-400 hover:text-red-500"><i class="fas fa-trash"></i> <span data-i18n="btn_clear">Temizle</span></button>
+            </div>
+
+            <!-- Chat Area -->
+            <div id="chatArea" class="flex-1 p-4 overflow-y-auto chat-scroll space-y-3 bg-[#e5ded8]">
+                <!-- Messages will appear here -->
+                <div class="flex justify-center my-4">
+                    <span class="bg-white/80 text-gray-600 text-xs py-1 px-3 rounded shadow-sm" data-i18n="sim_started">Bot simülasyonu başlatıldı</span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-white p-4 border-t">
+                <form onsubmit="sendMessage(event)" class="flex gap-2">
+                    <input type="text" id="chatInput" class="flex-1 p-3 border rounded-full focus:outline-none focus:border-green-500 bg-gray-50" data-i18n-placeholder="ph_chat" placeholder="Bir mesaj yazın...">
+                    <button type="submit" class="bg-green-600 text-white w-12 h-12 rounded-full hover:bg-green-700 shadow flex items-center justify-center">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const UI_TRANSLATIONS = {
+            tr: {
+                header_title: "Bot Builder",
+                header_subtitle: "| Kendi AI Asistanını Tasarla",
+                btn_save: "Kaydet",
+                btn_buy: "Satın Al & İndir ($50)",
+                tab_manual: "Bot Ayarları",
+                tab_web: "Web",
+                tab_file: "Doküman",
+                
+                sec1_title: "Şirket & Bot Kimliği",
+                lbl_company_name: "Şirket İsmi",
+                ph_company_name: "Örn: ABC Emlak",
+                lbl_industry: "Hizmet Alanı (Sektör)",
+                ph_industry: "Örn: Gayrimenkul Danışmanlığı",
+                lbl_bot_name: "Bot İsmi",
+                ph_bot_name: "Örn: Elif",
+                lbl_role: "Rolü",
+                ph_role: "Örn: Satış Temsilcisi",
+                lbl_tone: "Botun Kişiliği (Tonu)",
+                ph_tone: "Örn: Kurumsal, samimi, enerjik...",
+
+                sec2_title: "Şirket Detayları",
+                lbl_desc: "Şirket Tarihçesi ve Tanıtımı",
+                ph_desc: "Ne zaman kuruldu? Vizyonu nedir? Ne kadar süredir sektörde?",
+                lbl_process: "Hizmet Süreci Örneği",
+                ph_process: "Örn: Müşteri arar, randevu alırız, yer gösterimi yaparız...",
+                lbl_services: "Verilen Hizmetler",
+                ph_services: "Örn: Arsa satışı, konut kiralama...",
+                lbl_not_services: "Verilmeyen Hizmetler (Karıştırılanlar)",
+                ph_not_services: "Örn: Kiralık ev bakmıyoruz, sadece satılık.",
+
+                sec3_title: "Bilgi Bankası & SSS",
+                sec3_desc: "Müşterilerin sorabileceği 15 soru ve cevabı için \"Doküman\" sekmesinden dosya yükleyebilirsiniz veya buraya yazabilirsiniz.",
+                ph_kb: "Ekstra bilgiler, sık sorulan sorular ve cevapları...",
+
+                sec4_title: "Kurallar ve Yasaklar",
+                lbl_forbidden: "Asla Konuşulmayacak Konular",
+                ph_forbidden: "Örn: Siyaset, din, yönetici telefonları, şirket cirosu...",
+                lbl_refusal: "Reddetme Cevabı",
+                ph_refusal: "Örn: Bu bilgiyi paylaşamıyorum, ancak hizmetlerimizle ilgili...",
+
+                sec5_title: "Randevu & Satış Hedefi",
+                lbl_req_info: "Randevu İçin İstenen Bilgiler",
+                chk_name: "İsim",
+                chk_phone: "Telefon",
+                chk_address: "Adres",
+                chk_email: "E-posta",
+                chk_notes: "Not",
+                lbl_closing: "Görüşme Sonlandırma Mesajı",
+                ph_closing: "Örn: Satış departmanımız sizi en kısa sürede arayacaktır.",
+
+                web_title: "Web Sitenizden Öğrensin",
+                web_desc: "Botunuz web sitenizi tarayarak hizmetlerinizi ve bilgilerinizi otomatik öğrenir.",
+                ph_url: "https://ornek-site.com",
+                btn_scrape: "Analiz Et",
+                
+                file_title: "Doküman Yükle",
+                file_desc: "PDF veya Word dosyalarınızı yükleyin, botunuz içeriği öğrensin.",
+                btn_file: "Dosya Seç",
+
+                sim_title: "Canlı Önizleme",
+                btn_clear: "Temizle",
+                ph_chat: "Bir mesaj yazın...",
+                sim_started: "Bot simülasyonu başlatıldı",
+                sim_cleared: "Sohbet temizlendi"
+            },
+            en: {
+                header_title: "Bot Builder",
+                header_subtitle: "| Design Your AI Assistant",
+                btn_save: "Save",
+                btn_buy: "Buy & Download ($50)",
+                tab_manual: "Bot Settings",
+                tab_web: "Web",
+                tab_file: "Document",
+
+                sec1_title: "Company & Bot Identity",
+                lbl_company_name: "Company Name",
+                ph_company_name: "Ex: ABC Real Estate",
+                lbl_industry: "Industry (Sector)",
+                ph_industry: "Ex: Real Estate Consulting",
+                lbl_bot_name: "Bot Name",
+                ph_bot_name: "Ex: Alice",
+                lbl_role: "Role",
+                ph_role: "Ex: Sales Representative",
+                lbl_tone: "Bot Personality (Tone)",
+                ph_tone: "Ex: Corporate, friendly, energetic...",
+
+                sec2_title: "Company Details",
+                lbl_desc: "Company History & Introduction",
+                ph_desc: "When was it founded? What is the vision? How long in the sector?",
+                lbl_process: "Service Process Example",
+                ph_process: "Ex: Customer calls, we make appointment, we show the property...",
+                lbl_services: "Services Offered",
+                ph_services: "Ex: Land sales, house rental...",
+                lbl_not_services: "Services Not Offered",
+                ph_not_services: "Ex: We don't do rentals, only sales.",
+
+                sec3_title: "Knowledge Base & FAQ",
+                sec3_desc: "You can upload files from the \"Document\" tab for 15 FAQs or write them here.",
+                ph_kb: "Extra info, frequently asked questions and answers...",
+
+                sec4_title: "Rules & Restrictions",
+                lbl_forbidden: "Forbidden Topics",
+                ph_forbidden: "Ex: Politics, religion, manager phone numbers...",
+                lbl_refusal: "Refusal Response",
+                ph_refusal: "Ex: I cannot share this information, but regarding our services...",
+
+                sec5_title: "Appointment & Sales Goal",
+                lbl_req_info: "Required Info for Appointment",
+                chk_name: "Name",
+                chk_phone: "Phone",
+                chk_address: "Address",
+                chk_email: "Email",
+                chk_notes: "Notes",
+                lbl_closing: "Closing Message",
+                ph_closing: "Ex: Our sales department will contact you shortly.",
+
+                web_title: "Learn from Website",
+                web_desc: "Your bot learns your services and info by crawling your website.",
+                ph_url: "https://example-site.com",
+                btn_scrape: "Analyze",
+                
+                file_title: "Upload Document",
+                file_desc: "Upload PDF or Word files, your bot learns the content.",
+                btn_file: "Select File",
+
+                sim_title: "Live Preview",
+                btn_clear: "Clear",
+                ph_chat: "Type a message...",
+                sim_started: "Bot simulation started",
+                sim_cleared: "Chat cleared"
+            }
+        };
+
+        let currentConfig = {};
+        let currentLanguage = 'tr';
+
+        // INITIALIZATION
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadConfig();
+        });
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            
+            // Update Toggle UI
+            const btnTr = document.getElementById('btn-lang-tr');
+            const btnEn = document.getElementById('btn-lang-en');
+            
+            if (lang === 'tr') {
+                btnTr.className = "px-3 py-1 rounded-md text-sm font-medium transition bg-white text-blue-600 shadow-sm";
+                btnEn.className = "px-3 py-1 rounded-md text-sm font-medium transition text-gray-500 hover:text-gray-700";
+            } else {
+                btnEn.className = "px-3 py-1 rounded-md text-sm font-medium transition bg-white text-blue-600 shadow-sm";
+                btnTr.className = "px-3 py-1 rounded-md text-sm font-medium transition text-gray-500 hover:text-gray-700";
+            }
+
+            // Update Text Content
+            const texts = UI_TRANSLATIONS[lang];
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (texts[key]) el.innerText = texts[key];
+            });
+
+            // Update Placeholders
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (texts[key]) el.placeholder = texts[key];
+            });
+
+            // Update Config Language and Save (Silent)
+            currentConfig.language = lang;
+            saveConfig(); // Save language preference to server
+        }
+
+        // TABS
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+                b.classList.add('border-transparent', 'text-gray-500');
+            });
+            document.getElementById('tab-' + tab).classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+            document.getElementById('tab-' + tab).classList.remove('border-transparent', 'text-gray-500');
+
+            ['manual', 'web', 'file'].forEach(t => document.getElementById('content-' + t).classList.add('hidden'));
+            document.getElementById('content-' + tab).classList.remove('hidden');
+        }
+
+        // CONFIG LOADING
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                currentConfig = await res.json();
+                
+                // Set Language
+                const savedLang = currentConfig.language || 'tr';
+                setLanguage(savedLang);
+
+                // 1. Identity
+                document.getElementById('personaName').value = currentConfig.persona.name || '';
+                document.getElementById('personaRole').value = currentConfig.persona.role || '';
+                document.getElementById('personaTone').value = currentConfig.persona.tone || '';
+                document.getElementById('companyName').value = currentConfig.company.name || '';
+                document.getElementById('companyIndustry').value = currentConfig.company.industry || '';
+
+                // 2. Company Details
+                document.getElementById('companyDescription').value = currentConfig.company.description || '';
+                document.getElementById('serviceProcessExample').value = currentConfig.company.service_process_example || '';
+                document.getElementById('servicesOffered').value = currentConfig.company.services_offered || '';
+                document.getElementById('servicesNotOffered').value = currentConfig.company.services_not_offered || '';
+
+                // 3. KB
+                document.getElementById('kbGeneralInfo').value = currentConfig.knowledgeBase.general_info || '';
+
+                // 4. Rules
+                document.getElementById('forbiddenTopics').value = currentConfig.rules.forbidden_topics || '';
+                document.getElementById('refusalResponse').value = currentConfig.rules.refusal_response || '';
+
+                // 5. Appointment
+                document.getElementById('closingMessage').value = currentConfig.appointment_flow.closing_message || '';
+                
+                // Checkboxes
+                const reqInfo = currentConfig.appointment_flow.required_info || [];
+                document.querySelectorAll('.req-info').forEach(cb => {
+                    cb.checked = reqInfo.includes(cb.value);
+                });
+
+            } catch (e) { console.error(e); }
+        }
+
+        // ACTIONS
+        async function saveConfig() {
+            // Update local object structure if missing
+            if(!currentConfig.company) currentConfig.company = {};
+            if(!currentConfig.persona) currentConfig.persona = {};
+            if(!currentConfig.knowledgeBase) currentConfig.knowledgeBase = {};
+            if(!currentConfig.rules) currentConfig.rules = {};
+            if(!currentConfig.appointment_flow) currentConfig.appointment_flow = {};
+
+            // Language
+            currentConfig.language = currentLanguage;
+
+            // 1. Identity
+            currentConfig.company.name = document.getElementById('companyName').value;
+            currentConfig.company.industry = document.getElementById('companyIndustry').value;
+            currentConfig.persona.name = document.getElementById('personaName').value;
+            currentConfig.persona.role = document.getElementById('personaRole').value;
+            currentConfig.persona.tone = document.getElementById('personaTone').value;
+
+            // 2. Company Details
+            currentConfig.company.description = document.getElementById('companyDescription').value;
+            currentConfig.company.service_process_example = document.getElementById('serviceProcessExample').value;
+            currentConfig.company.services_offered = document.getElementById('servicesOffered').value;
+            currentConfig.company.services_not_offered = document.getElementById('servicesNotOffered').value;
+
+            // 3. KB
+            currentConfig.knowledgeBase.general_info = document.getElementById('kbGeneralInfo').value;
+            
+            // 4. Rules
+            currentConfig.rules.forbidden_topics = document.getElementById('forbiddenTopics').value;
+            currentConfig.rules.refusal_response = document.getElementById('refusalResponse').value;
+
+            // 5. Appointment
+            currentConfig.appointment_flow.closing_message = document.getElementById('closingMessage').value;
+            
+            const selectedReqs = [];
+            document.querySelectorAll('.req-info:checked').forEach(cb => selectedReqs.push(cb.value));
+            currentConfig.appointment_flow.required_info = selectedReqs;
+
+            try {
+                await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(currentConfig)
+                });
+                // alert('Kaydedildi!'); // No alert needed, seamless
+            } catch (e) { alert('Hata!'); }
+        }
+
+        async function scrapeSite() {
+            const url = document.getElementById('scrapeUrl').value;
+            if (!url) return;
+            
+            const btn = document.querySelector('button[onclick="scrapeSite()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                const res = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                
+                const preview = document.getElementById('scrapePreview');
+                preview.classList.remove('hidden');
+                preview.innerText = data.preview + '...';
+                
+                // Refresh manual text area
+                await loadConfig(); 
+                alert(currentLanguage === 'tr' ? 'Web sitesi verileri bilgi bankasına eklendi!' : 'Website data added to knowledge base!');
+            } catch (e) { alert('Hata oluştu/Error occurred'); }
+            
+            btn.innerHTML = originalText;
+        }
+
+        async function uploadFile() {
+            const input = document.getElementById('fileInput');
+            if (!input.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('document', input.files[0]);
+
+            try {
+                const res = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+
+                const preview = document.getElementById('uploadPreview');
+                preview.classList.remove('hidden');
+                preview.innerText = data.preview + '...';
+                
+                await loadConfig();
+                alert(currentLanguage === 'tr' ? 'Dosya içeriği bilgi bankasına eklendi!' : 'File content added to knowledge base!');
+            } catch (e) { alert('Yükleme hatası/Upload error'); }
+        }
+
+        async function downloadPackage() {
+            // Ensure config is saved first
+            await saveConfig();
+            window.location.href = '/api/download';
+        }
+
+        // CHAT LOGIC
+        async function sendMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add User Message
+            appendMessage(message, 'user');
+            input.value = '';
+
+            // Loading
+            const loadingId = appendLoading();
+
+            try {
+                // Auto-save before chatting to ensure latest config
+                await saveConfig();
+
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message })
+                });
+                const data = await res.json();
+
+                removeLoading(loadingId);
+                appendMessage(data.reply, 'bot');
+            } catch (e) {
+                removeLoading(loadingId);
+                appendMessage('Hata oluştu/Error.', 'bot');
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const div = document.createElement('div');
+            const isBot = sender === 'bot';
+            
+            div.className = `flex ${isBot ? 'justify-start' : 'justify-end'}`;
+            div.innerHTML = `
+                <div class="max-w-[80%] rounded-lg p-3 shadow-sm text-sm ${isBot ? 'bg-white text-gray-800 rounded-tl-none' : 'bg-[#dcf8c6] text-gray-800 rounded-tr-none'}">
+                    ${text}
+                    <div class="text-[10px] text-gray-400 text-right mt-1">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                </div>
+            `;
+            document.getElementById('chatArea').appendChild(div);
+            document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+        }
+
+        function appendLoading() {
+            const id = 'loading-' + Date.now();
+            const div = document.createElement('div');
+            div.id = id;
+            div.className = 'flex justify-start';
+            div.innerHTML = `
+                <div class="bg-white rounded-lg p-3 shadow-sm rounded-tl-none">
+                    <div class="flex gap-1">
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+                        <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('chatArea').appendChild(div);
+            return id;
+        }
+
+        function removeLoading(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function clearChat() {
+            const msg = currentLanguage === 'tr' ? 'Sohbet temizlendi' : 'Chat cleared';
+            document.getElementById('chatArea').innerHTML = `
+                <div class="flex justify-center my-4">
+                    <span class="bg-white/80 text-gray-600 text-xs py-1 px-3 rounded shadow-sm">${msg}</span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
