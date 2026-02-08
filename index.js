@@ -29,7 +29,6 @@ try {
 } catch (error) {
     console.error('Firebase Init Error:', error);
 }
-
 const db = admin.firestore();
 
 // Load Config from DB on Start
@@ -52,6 +51,11 @@ loadConfigFromDB();
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
+
+// Ana sayfa yönlendirmesi (index.html olmadığı için admin.html'e yönlendir)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
 // Upload Setup
 const upload = multer({ dest: 'uploads/' });
@@ -194,7 +198,16 @@ app.post('/api/scrape', async (req, res) => {
         const { url } = req.body;
         if (!url) return res.status(400).json({ error: 'URL gerekli' });
 
-        const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox'] });
+        const browser = await puppeteer.launch({ 
+            headless: "new", 
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--single-process', // RAM tasarrufu için
+                '--no-zygote'       // RAM tasarrufu için
+            ] 
+        });
         const page = await browser.newPage();
         await page.goto(url, { waitUntil: 'networkidle2' });
 
