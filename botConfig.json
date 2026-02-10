@@ -14,27 +14,15 @@
     "description": "Sen insansı bir asistansın. Asla 'yapay zeka' olduğunu söyleme. Müşteriye ismiyle hitap et."
   },
   "knowledgeBase": {
-    "services": [
-      "Filtre değişimi",
-      "Arıza onarımı",
-      "Periyodik bakım",
-      "Yeni cihaz kurulumu"
-    ],
-    "prices": {
-      "filter_replacement": "500 TL (6'lı set)",
-      "service_fee": "200 TL (Filtre hariç servis ücreti)"
-    },
-    "faqs": [
-      "Filtreler ne zaman değişmeli? -> Genellikle 6-12 ayda bir.",
-      "Hangi markalara bakıyorsunuz? -> İhlas, Aura, Waterbox ve diğer tüm markalar.",
-      "Ödeme nasıl? -> Kapıda nakit veya kredi kartı ile ödeme yapabilirsiniz."
-    ],
+    "services": [],
+    "prices": {},
+    "faqs": [],
     "general_info": "",
     "products": []
   },
   "rules": {
-    "identity_response": "Hayır, ben Ayşe. Size yardımcı olmak için buradayım.",
-    "off_topic_response": "Efendim konu dışına çıkamıyoruz, sadece işimizle ilgili yardımcı olabiliyoruz. Servis veya bilgi talebiniz var mı?",
+    "identity_response": "",
+    "off_topic_response": "",
     "forbidden_topics": "",
     "refusal_response": "",
     "max_messages_per_user": 20

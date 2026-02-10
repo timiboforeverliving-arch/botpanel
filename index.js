@@ -147,9 +147,24 @@ function buildPerfectPrompt(memory) {
     const refusalResponse = botConfig.rules.refusal_response || (lang === 'en' ? 'I cannot help with that.' : 'Maalesef bu konuda yardımcı olamıyorum.');
     const identityResponse = botConfig.rules.identity_response || (lang === 'en' ? 'No, I am ' + botConfig.persona.name : 'Hayır, ben ' + botConfig.persona.name);
 
-    const servicesList = kb.services.map(s => `- ${s}`).join('\n');
-    const faqsList = kb.faqs.join('\n');
-    const pricesList = Object.entries(kb.prices).map(([key, val]) => `- ${key}: ${val}`).join('\n');
+    // KNOWLEDGE BASE (Dinamik ve Text Bazlı)
+    // Not: Eski array bazlı yapılar (services, faqs, prices) yerine kullanıcıdan gelen metinleri kullanıyoruz.
+    // Eğer array'ler boş değilse yine de ekleyelim (geriye dönük uyumluluk için), ama öncelik metinlerde.
+    
+    let servicesList = '';
+    if (kb.services && kb.services.length > 0) {
+        servicesList = kb.services.map(s => `- ${s}`).join('\n');
+    }
+
+    let faqsList = '';
+    if (kb.faqs && kb.faqs.length > 0) {
+        faqsList = kb.faqs.join('\n');
+    }
+
+    let pricesList = '';
+    if (kb.prices && Object.keys(kb.prices).length > 0) {
+        pricesList = Object.entries(kb.prices).map(([key, val]) => `- ${key}: ${val}`).join('\n');
+    }
 
     const collectedInfo = memory.appointmentStep !== 'none' ? 
         (lang === 'en' ? 
@@ -157,15 +172,28 @@ function buildPerfectPrompt(memory) {
         `TOPLANAN BİLGİLER:\nİsim: ${appointmentData.name || 'Alınmadı'}\nAdres: ${appointmentData.address || 'Alınmadı'}\nTelefon: ${appointmentData.phone || 'Alınmadı'}`)
         : '';
 
+    // PROMPT CONSTRUCTION
+    // Boş alanları temizlemek için filter kullanıyoruz
     return [
         t.role_intro.replace('{name}', botConfig.persona.name).replace('{company}', botConfig.company.name).replace('{role}', botConfig.persona.role).replace('{tone}', botConfig.persona.tone),
+        
         t.company_id.replace('{desc}', companyDesc),
+        
+        // Services: Hem text hem liste varsa birleştir, yoksa sadece text
         t.services.replace('{offered}', servicesOffered).replace('{list}', servicesList).replace('{not_offered}', servicesNotOffered),
+        
         t.process.replace('{process}', serviceProcess),
+        
+        // Prices: Eğer liste boşsa başlığı gizlemek gerekebilir ama şimdilik boş string gidecek
         t.prices.replace('{list}', pricesList),
+        
+        // KB & FAQs
         t.kb.replace('{info}', kb.general_info).replace('{faqs}', faqsList),
+        
         t.rules.replace('{identity_response}', identityResponse).replace('{forbidden}', forbiddenTopics).replace('{refusal}', refusalResponse),
+        
         t.memory.replace('{name}', customerInfo.name || '?').replace('{phone}', customerInfo.phone || '?').replace('{address}', customerInfo.address || '?').replace('{step}', memory.appointmentStep).replace('{collected}', collectedInfo),
+        
         t.history.replace('{context}', context).replace('{company}', botConfig.company.name).replace('{tone}', botConfig.persona.tone)
     ].join('\n\n');
 }
