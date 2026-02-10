@@ -18,17 +18,8 @@ const CONFIG_DOC_ID = 'default_config';
 dotenv.config();
 
 // Firebase
-let serviceAccount;
-try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    } else {
-        serviceAccount = require('./service-account.json');
-    }
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-} catch (error) {
-    console.error('Firebase Init Error:', error);
-}
+const serviceAccount = require('./service-account.json');
+admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 const db = admin.firestore();
 
 // Load Config from DB on Start
@@ -51,11 +42,6 @@ loadConfigFromDB();
 const app = express();
 app.use(express.json());
 app.use(express.static('public'));
-
-// Ana sayfa yönlendirmesi (index.html olmadığı için admin.html'e yönlendir)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
 
 // Upload Setup
 const upload = multer({ dest: 'uploads/' });
@@ -147,24 +133,9 @@ function buildPerfectPrompt(memory) {
     const refusalResponse = botConfig.rules.refusal_response || (lang === 'en' ? 'I cannot help with that.' : 'Maalesef bu konuda yardımcı olamıyorum.');
     const identityResponse = botConfig.rules.identity_response || (lang === 'en' ? 'No, I am ' + botConfig.persona.name : 'Hayır, ben ' + botConfig.persona.name);
 
-    // KNOWLEDGE BASE (Dinamik ve Text Bazlı)
-    // Not: Eski array bazlı yapılar (services, faqs, prices) yerine kullanıcıdan gelen metinleri kullanıyoruz.
-    // Eğer array'ler boş değilse yine de ekleyelim (geriye dönük uyumluluk için), ama öncelik metinlerde.
-    
-    let servicesList = '';
-    if (kb.services && kb.services.length > 0) {
-        servicesList = kb.services.map(s => `- ${s}`).join('\n');
-    }
-
-    let faqsList = '';
-    if (kb.faqs && kb.faqs.length > 0) {
-        faqsList = kb.faqs.join('\n');
-    }
-
-    let pricesList = '';
-    if (kb.prices && Object.keys(kb.prices).length > 0) {
-        pricesList = Object.entries(kb.prices).map(([key, val]) => `- ${key}: ${val}`).join('\n');
-    }
+    const servicesList = kb.services.map(s => `- ${s}`).join('\n');
+    const faqsList = kb.faqs.join('\n');
+    const pricesList = Object.entries(kb.prices).map(([key, val]) => `- ${key}: ${val}`).join('\n');
 
     const collectedInfo = memory.appointmentStep !== 'none' ? 
         (lang === 'en' ? 
@@ -172,28 +143,15 @@ function buildPerfectPrompt(memory) {
         `TOPLANAN BİLGİLER:\nİsim: ${appointmentData.name || 'Alınmadı'}\nAdres: ${appointmentData.address || 'Alınmadı'}\nTelefon: ${appointmentData.phone || 'Alınmadı'}`)
         : '';
 
-    // PROMPT CONSTRUCTION
-    // Boş alanları temizlemek için filter kullanıyoruz
     return [
         t.role_intro.replace('{name}', botConfig.persona.name).replace('{company}', botConfig.company.name).replace('{role}', botConfig.persona.role).replace('{tone}', botConfig.persona.tone),
-        
         t.company_id.replace('{desc}', companyDesc),
-        
-        // Services: Hem text hem liste varsa birleştir, yoksa sadece text
         t.services.replace('{offered}', servicesOffered).replace('{list}', servicesList).replace('{not_offered}', servicesNotOffered),
-        
         t.process.replace('{process}', serviceProcess),
-        
-        // Prices: Eğer liste boşsa başlığı gizlemek gerekebilir ama şimdilik boş string gidecek
         t.prices.replace('{list}', pricesList),
-        
-        // KB & FAQs
         t.kb.replace('{info}', kb.general_info).replace('{faqs}', faqsList),
-        
         t.rules.replace('{identity_response}', identityResponse).replace('{forbidden}', forbiddenTopics).replace('{refusal}', refusalResponse),
-        
         t.memory.replace('{name}', customerInfo.name || '?').replace('{phone}', customerInfo.phone || '?').replace('{address}', customerInfo.address || '?').replace('{step}', memory.appointmentStep).replace('{collected}', collectedInfo),
-        
         t.history.replace('{context}', context).replace('{company}', botConfig.company.name).replace('{tone}', botConfig.persona.tone)
     ].join('\n\n');
 }
@@ -226,63 +184,32 @@ app.post('/api/scrape', async (req, res) => {
         const { url } = req.body;
         if (!url) return res.status(400).json({ error: 'URL gerekli' });
 
-        console.log(`Scraping started for: ${url}`);
-
-        const browser = await puppeteer.launch({ 
-            headless: "new", 
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--single-process',
-                '--no-zygote'
-            ] 
-        });
+        const browser = await puppeteer.launch({ headless: "new", args: ['--no-sandbox'] });
         const page = await browser.newPage();
-        
-        // Bot korumasını aşmak için User-Agent
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36');
-        
-        // Timeout artırıldı ve bekleme süresi iyileştirildi
-        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto(url, { waitUntil: 'networkidle2' });
 
         // Basit metin çekimi
         const content = await page.evaluate(() => {
-            const bodyText = document.body ? document.body.innerText : '';
             return {
-                title: document.title || '',
-                text: bodyText.substring(0, 5000)
+                title: document.title,
+                text: document.body.innerText.substring(0, 5000) // İlk 5000 karakter
             };
         });
 
         await browser.close();
 
-        if (!content.text || content.text.trim().length === 0) {
-            throw new Error('Site içeriği boş veya alınamadı.');
-        }
-
-        console.log('Scrape successful, text length:', content.text.length);
-
         // Config'e ekle
         const lang = botConfig.language || 'tr';
         const prefix = lang === 'en' ? `Web Scraped Info (${url}):` : `Web Sitesinden Çekilen Bilgi (${url}):`;
-        
-        // Mevcut bilgiyi koru, üzerine ekle
-        const currentInfo = botConfig.knowledgeBase.general_info || '';
-        // Eğer zaten bu URL eklenmişse tekrar ekleme (basit kontrol)
-        if (!currentInfo.includes(url)) {
-            botConfig.knowledgeBase.general_info = `${currentInfo}\n\n${prefix}\n${content.text.substring(0, 800)}...`.trim();
-        } else {
-             console.log('URL already in KB, skipping append.');
-        }
+        botConfig.knowledgeBase.general_info = `${prefix}\n${content.text.substring(0, 500)}...`;
         
         // DB Update
         await db.collection('configs').doc(CONFIG_DOC_ID).set(botConfig);
 
-        res.json({ success: true, preview: content.text.substring(0, 300) });
+        res.json({ success: true, preview: content.text.substring(0, 200) });
     } catch (error) {
         console.error('Scrape error:', error);
-        res.status(500).json({ error: 'Site okunamadı: ' + error.message });
+        res.status(500).json({ error: 'Site okunamadı' });
     }
 });
 
