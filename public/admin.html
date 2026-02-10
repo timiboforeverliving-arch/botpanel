@@ -540,14 +540,18 @@
                 });
                 const data = await res.json();
                 
+                if (!res.ok || !data.success) {
+                    throw new Error(data.error || 'İşlem başarısız');
+                }
+                
                 const preview = document.getElementById('scrapePreview');
                 preview.classList.remove('hidden');
-                preview.innerText = data.preview + '...';
+                preview.innerText = (data.preview || 'İçerik alındı') + '...';
                 
                 // Refresh manual text area
                 await loadConfig(); 
                 alert(currentLanguage === 'tr' ? 'Web sitesi verileri bilgi bankasına eklendi!' : 'Website data added to knowledge base!');
-            } catch (e) { alert('Hata oluştu/Error occurred'); }
+            } catch (e) { alert('Hata: ' + e.message); }
             
             btn.innerHTML = originalText;
         }

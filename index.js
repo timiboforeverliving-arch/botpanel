@@ -226,41 +226,63 @@ app.post('/api/scrape', async (req, res) => {
         const { url } = req.body;
         if (!url) return res.status(400).json({ error: 'URL gerekli' });
 
+        console.log(`Scraping started for: ${url}`);
+
         const browser = await puppeteer.launch({ 
             headless: "new", 
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
                 '--disable-dev-shm-usage',
-                '--single-process', // RAM tasarrufu için
-                '--no-zygote'       // RAM tasarrufu için
+                '--single-process',
+                '--no-zygote'
             ] 
         });
         const page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'networkidle2' });
+        
+        // Bot korumasını aşmak için User-Agent
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36');
+        
+        // Timeout artırıldı ve bekleme süresi iyileştirildi
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // Basit metin çekimi
         const content = await page.evaluate(() => {
+            const bodyText = document.body ? document.body.innerText : '';
             return {
-                title: document.title,
-                text: document.body.innerText.substring(0, 5000) // İlk 5000 karakter
+                title: document.title || '',
+                text: bodyText.substring(0, 5000)
             };
         });
 
         await browser.close();
 
+        if (!content.text || content.text.trim().length === 0) {
+            throw new Error('Site içeriği boş veya alınamadı.');
+        }
+
+        console.log('Scrape successful, text length:', content.text.length);
+
         // Config'e ekle
         const lang = botConfig.language || 'tr';
         const prefix = lang === 'en' ? `Web Scraped Info (${url}):` : `Web Sitesinden Çekilen Bilgi (${url}):`;
-        botConfig.knowledgeBase.general_info = `${prefix}\n${content.text.substring(0, 500)}...`;
+        
+        // Mevcut bilgiyi koru, üzerine ekle
+        const currentInfo = botConfig.knowledgeBase.general_info || '';
+        // Eğer zaten bu URL eklenmişse tekrar ekleme (basit kontrol)
+        if (!currentInfo.includes(url)) {
+            botConfig.knowledgeBase.general_info = `${currentInfo}\n\n${prefix}\n${content.text.substring(0, 800)}...`.trim();
+        } else {
+             console.log('URL already in KB, skipping append.');
+        }
         
         // DB Update
         await db.collection('configs').doc(CONFIG_DOC_ID).set(botConfig);
 
-        res.json({ success: true, preview: content.text.substring(0, 200) });
+        res.json({ success: true, preview: content.text.substring(0, 300) });
     } catch (error) {
         console.error('Scrape error:', error);
-        res.status(500).json({ error: 'Site okunamadı' });
+        res.status(500).json({ error: 'Site okunamadı: ' + error.message });
     }
 });
 
